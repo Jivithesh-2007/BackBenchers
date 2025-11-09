@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>BackBenchers — Neo Futuristic Quiz</title>
+<style>
+/* =================== THEME CORE =================== */
+:root{
+  --bg:#070a12; --panel:#0d1324; --card:#0f1730;
+  --text:#f7f9ff; --muted:#aab6df;
+  --accent:#a855f7; --accent2:#7c3aed; --accent3:#6d28d9;
+  --border:rgba(255,255,255,.10);
+
+  /* quiz option backgrounds (dark theme) */
+  --opt-bg:#1a1f35;          /* SOLID for readability */
+  --opt-bg-hover:#202749;
+  --opt-bg-selected:#242d59;
+}
+:root[data-mode="light"]{
+  --bg:#f5f7ff; --panel:#eef2ff; --card:#ffffff;
+  --text:#0b1120; --muted:#4b5a86; --border:rgba(0,0,0,.10);
+  --opt-bg:#f0f3ff;          /* SOLID for readability */
+  --opt-bg-hover:#e7ebff;
+  --opt-bg-selected:#dee5ff;
+}
+:root.theme-purple{ --accent:#a855f7; --accent2:#7c3aed; --accent3:#6d28d9;}
+:root.theme-blue  { --accent:#60a5fa; --accent2:#3b82f6; --accent3:#2563eb;}
+:root.theme-cyan  { --accent:#67e8f9; --accent2:#22d3ee; --accent3:#06b6d4;}
+:root.theme-green { --accent:#86efac; --accent2:#22c55e; --accent3:#16a34a;}
+:root.theme-orange{ --accent:#fbbf24; --accent2:#f59e0b; --accent3:#d97706;}
+:root.theme-pink  { --accent:#f472b6; --accent2:#ec4899; --accent3:#db2777;}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;
+  color:var(--text); background:var(--bg); overflow:hidden;
+}
+
+/* ===== particle canvas (animated background) ===== */
+#bgParticles{position:fixed;inset:0;z-index:-2}
+
+/* subtle radial gradients over canvas */
+body::before, body::after{
+  content:""; position:fixed; inset:-20%; pointer-events:none; z-index:-1;
+  background:
+    radial-gradient(900px 600px at 15% -10%, color-mix(in oklab, var(--accent2) 18%, transparent), transparent 60%),
+    radial-gradient(900px 600px at 110% 10%, color-mix(in oklab, var(--accent2) 14%, transparent), transparent 55%);
+  opacity:.5;
+}
+
+/* =================== LAYOUT =================== */
+.app{display:grid; grid-template-columns:260px 1fr; height:100dvh}
+.sidebar{
+  background:linear-gradient(180deg, color-mix(in oklab, var(--panel) 96%, transparent), color-mix(in oklab, var(--panel) 86%, transparent));
+  border-right:1px solid var(--border);
+  padding:16px; display:flex; flex-direction:column; gap:16px;
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.3px}
+.logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 10px 24px var(--accent2)}
+
+.nav{display:flex; flex-direction:column; gap:8px; margin-top:8px}
+.nav a{
+  padding:10px 12px; border-radius:12px; color:var(--muted); text-decoration:none; display:flex; align-items:center; gap:8px;
+  border:1px solid transparent; transition:.2s;
+}
+.nav a:hover{ background:color-mix(in oklab, var(--panel) 80%, transparent); color:#fff; border-color:var(--border) }
+.nav a.active{ background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#0b0f1c; font-weight:800 }
+
+.sidebar-footer{margin-top:auto; display:flex; flex-direction:column; gap:10px}
+.switchers{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
+.pill{background:rgba(255,255,255,.08); border:1px solid var(--border); color:var(--muted); padding:6px 10px; border-radius:999px; cursor:pointer}
+.theme-dot{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.6);cursor:pointer}
+.dot-purple{background:linear-gradient(135deg,#a855f7,#7c3aed)}
+.dot-blue{background:linear-gradient(135deg,#60a5fa,#3b82f6)}
+.dot-cyan{background:linear-gradient(135deg,#67e8f9,#22d3ee)}
+.dot-green{background:linear-gradient(135deg,#86efac,#22c55e)}
+.dot-orange{background:linear-gradient(135deg,#fbbf24,#f59e0b)}
+.dot-pink{background:linear-gradient(135deg,#f472b6,#ec4899)}
+
+.main{position:relative; overflow:auto; background:transparent}
+.container{max-width:1080px; margin:0 auto; padding:20px}
+
+/* ===== topbar inside main (profile moved here) ===== */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.topbar .title{display:flex;align-items:center;gap:10px}
+.topbar .tools{display:flex;align-items:center;gap:10px}
+
+/* profile dropdown */
+.profile{position:relative}
+.profile-btn{
+  display:flex;align-items:center;gap:10px;background:color-mix(in oklab, var(--card) 95%, transparent);
+  padding:8px 12px;border:1px solid var(--border);border-radius:12px;cursor:pointer
+}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.dropdown{
+  position:absolute; right:0; top:120%; width:260px; background:linear-gradient(180deg, color-mix(in oklab, var(--card) 96%, transparent), color-mix(in oklab, var(--card) 88%, transparent));
+  border:1px solid var(--border); border-radius:14px; padding:12px; box-shadow:0 20px 60px rgba(0,0,0,.35); display:none; z-index:5;
+  animation:pop .18s ease both;
+}
+@keyframes pop{ from{opacity:0; transform:translateY(-4px) scale(.98)} to{opacity:1; transform:none} }
+.dropdown .row{display:flex;justify-content:space-between;margin-bottom:8px}
+.dropdown .s{font-size:12px;color:var(--muted)}
+.dropdown .field{display:flex;flex-direction:column;margin-top:8px}
+.dropdown input{padding:8px;border-radius:10px;border:1px solid var(--border);background:color-mix(in oklab, var(--card) 90%, transparent);color:var(--text)}
+.dropdown .actions{display:flex;gap:8px;margin-top:10px}
+
+/* =================== CARDS / COMMON =================== */
+.card{
+  background:linear-gradient(180deg, color-mix(in oklab, var(--card) 96%, transparent), color-mix(in oklab, var(--card) 88%, transparent));
+  border:1px solid var(--border); border-radius:16px; padding:16px;
+  box-shadow: 0 25px 60px rgba(0,0,0,.35), 0 0 50px color-mix(in oklab, var(--accent2) 10%, transparent) inset;
+}
+.grid{display:grid; gap:14px}
+.grid.cols-2{grid-template-columns:1.6fr 1fr}
+@media(max-width:1000px){ .app{grid-template-columns:1fr} .grid.cols-2{grid-template-columns:1fr} }
+.hr{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:12px 0}
+.muted{color:var(--muted)}
+
+/* =================== BUTTONS =================== */
+.btn{border:none;border-radius:12px;padding:10px 14px;font-weight:900;cursor:pointer;position:relative;overflow:hidden}
+.btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#0b0f1c}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn:active{transform:translateY(1px)}
+.btn .r{ position:absolute; border-radius:50%; transform:scale(0); background:rgba(255,255,255,.4); animation:ripple .6s linear; pointer-events:none}
+@keyframes ripple{ to{ transform:scale(12); opacity:0 }}
+
+/* =================== SCREENS =================== */
+.screen{display:none; animation: fadeSlide .35s ease both}
+.active-screen{display:block}
+@keyframes fadeSlide{ from{ opacity:0; transform:translateY(10px) } to{ opacity:1; transform:none } }
+
+/* =================== LEVELS =================== */
+.level{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border-radius:14px;border:1px dashed var(--border);background:rgba(255,255,255,.03)}
+.level.locked{opacity:.6; filter:saturate(.7)}
+.badge{padding:6px 10px;border-radius:999px;font-size:12px;border:1px solid var(--border);color:var(--muted);background:rgba(255,255,255,.03)}
+
+/* =================== QUIZ =================== */
+.titleRow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.progress{height:10px;border-radius:999px;background:color-mix(in oklab, var(--panel) 90%, transparent);overflow:hidden;border:1px solid var(--border)}
+.bar{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .35s ease}
+.question{font-size:20px;font-weight:900;margin-top:4px}
+.options{display:grid;gap:12px;margin-top:12px}
+
+/* >>> SOLID, HIGH-CONTRAST OPTION CARDS <<< */
+.opt{
+  background:var(--opt-bg); color:#ffffff; border:1px solid rgba(129,140,248,.35);
+  border-radius:14px; padding:14px; text-align:left; cursor:pointer; transition:.18s; position:relative;
+  box-shadow: 0 6px 18px rgba(0,0,0,.2);
+}
+:root[data-mode="light"] .opt{ color:#0b1120; border-color:rgba(0,0,0,.14) } /* light text dark */
+.opt:hover{ background:var(--opt-bg-hover); box-shadow:0 10px 28px rgba(0,0,0,.25) }
+.opt.selected{ outline:2px solid var(--accent); background:var(--opt-bg-selected) }
+.opt.correct{ border-color:rgba(34,197,94,.9); box-shadow:0 0 0 3px rgba(34,197,94,.25) inset }
+.opt.wrong{ border-color:rgba(239,68,68,.9); box-shadow:0 0 0 3px rgba(239,68,68,.22) inset; animation: shake .35s ease }
+.opt .label{font-weight:900;margin-right:6px}
+@keyframes shake{
+  10%,90%{ transform:translateX(-1px) } 20%,80%{ transform:translateX(2px) }
+  30%,50%,70%{ transform:translateX(-4px) } 40%,60%{ transform:translateX(4px) }
+}
+.feedback{display:none;margin-top:10px;padding:12px;border-radius:14px;border:1px dashed var(--border)}
+.feedback.ok{display:block;background:rgba(34,197,94,.1); border-color:rgba(34,197,94,.6)}
+.feedback.no{display:block;background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.6)}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.slideQ{animation: slideIn .45s cubic-bezier(.2,.9,.2,1) both}
+@keyframes slideIn{ from{ opacity:0; transform:translateX(10px)} to{ opacity:1; transform:none } }
+
+/* =================== TABLES =================== */
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border:1px solid var(--border);text-align:left}
+tbody tr{transition:.2s} tbody tr:hover{background:rgba(255,255,255,.04)}
+:root[data-mode="light"] tbody tr:hover{background:rgba(0,0,0,.03)}
+
+/* =================== CERTIFICATE =================== */
+.cert{display:none;gap:12px}
+canvas{max-width:100%}
+
+/* =================== AUTH MODAL =================== */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+.modal .box{
+  width:min(480px,95vw); background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:18px;
+  animation: drop .4s ease both;
+}
+@keyframes drop{ from{ opacity:0; transform:translateY(-10px) scale(.98)} to{ opacity:1; transform:none } }
+.field{display:flex;flex-direction:column;gap:6px}
+input{background:color-mix(in oklab, var(--card) 90%, transparent);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:12px}
+:root[data-mode="light"] input{background:#ffffff;color:#0b1120}
+
+/* =================== TOAST =================== */
+.toast{position:fixed;right:16px;bottom:16px;background:color-mix(in oklab, var(--card) 95%, transparent);border:1px solid var(--border);padding:10px 14px;border-radius:12px;opacity:0;transform:translateY(10px);transition:.25s}
+.toast.show{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<canvas id="bgParticles"></canvas>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand"><div class="logo"></div><div>BackBenchers ⚡</div></div>
+    <nav class="nav" id="sideNav">
+      <a href="#home" data-route="home" class="active">Dashboard</a>
+      <a href="#levels" data-route="levels">Levels</a>
+      <a href="#leaderboard" data-route="leaderboard">Leaderboard</a>
+      <a href="#multiplayer" data-route="multiplayer">Multiplayer</a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="switchers">
+        <span class="pill" id="modeToggle">Dark</span>
+        <div class="theme-dot dot-purple" data-theme="purple" title="Purple"></div>
+        <div class="theme-dot dot-blue" data-theme="blue" title="Blue"></div>
+        <div class="theme-dot dot-cyan" data-theme="cyan" title="Cyan"></div>
+        <div class="theme-dot dot-green" data-theme="green" title="Green"></div>
+        <div class="theme-dot dot-orange" data-theme="orange" title="Orange"></div>
+        <div class="theme-dot dot-pink" data-theme="pink" title="Pink"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span class="pill" id="userBadge">Guest</span>
+        <button class="btn primary" id="openAuth">Sign in</button>
+        <button class="btn ghost" id="logoutBtn" style="display:none">Logout</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="container">
+      <!-- topbar with profile -->
+      <div class="topbar">
+        <div class="title"><h2 style="margin:0">Dashboard</h2></div>
+        <div class="tools">
+          <div class="profile" id="profileMenu">
+            <button class="profile-btn" id="profileBtn">
+              <div class="avatar"></div>
+              <div>
+                <div id="miniName" style="font-weight:800;">Guest</div>
+                <div class="s" id="miniStats" style="font-size:11px;color:var(--muted)">Points 0 • Certs 0</div>
+              </div>
+            </button>
+            <div class="dropdown" id="profileDrop">
+              <div class="row"><strong id="ddName">Guest</strong><span class="s" id="ddEmail">—</span></div>
+              <div class="row"><span class="s">Points</span><span id="ddPoints">0</span></div>
+              <div class="row"><span class="s">Best %</span><span id="ddBest">0</span></div>
+              <div class="row"><span class="s">Certificates</span><span id="ddCerts">0</span></div>
+              <div class="field">
+                <label class="s">Edit display name</label>
+                <input id="ddNameInput" placeholder="Your name"/>
+              </div>
+              <div class="actions">
+                <button class="btn primary" id="ddSave">Save</button>
+                <button class="btn ghost" id="ddLogout">Logout</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section id="home" class="screen active-screen grid cols-2">
+        <div class="card">
+          <h3>Welcome to BackBenchers</h3>
+          <p class="muted">Instant feedback quizzes, 15 unlockable levels (≥80% to pass), certificates, leaderboard, and multiplayer rooms.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+            <button class="btn primary" onclick="go('levels')">Start Levels</button>
+            <button class="btn ghost" onclick="go('leaderboard')">Leaderboard</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Your Progress</h3>
+          <div class="hr"></div>
+          <p class="muted">Levels cleared: <strong id="progCleared">0</strong> / 15</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <span class="badge">Best Score: <span id="bestScore">0</span>%</span>
+            <span class="badge">Total Points: <span id="totalPoints">0</span></span>
+            <span class="badge">Certificates: <span id="certCount">0</span></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- LEVELS -->
+      <section id="levels" class="screen">
+        <h2>Levels</h2>
+        <div id="levelsList" class="grid"></div>
+      </section>
+
+      <!-- QUIZ -->
+      <section id="quiz" class="screen">
+        <div class="card">
+          <div class="titleRow">
+            <div><strong>Level <span id="lvlNo"></span></strong></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <span class="badge">Q <span id="qIndex">1</span>/<span id="qTotal">10</span></span>
+              <span class="badge">Score: <span id="liveScore">0</span></span>
+              <span class="badge">Time: <span id="timer">00:00</span></span>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <div class="progress"><div class="bar" id="bar"></div></div>
+
+          <div id="qWrap" class="slideQ">
+            <div class="question" id="qText">Loading…</div>
+            <div class="muted" id="qMeta"></div>
+            <div class="options" id="options"></div>
+            <div class="feedback" id="feedback"></div>
+          </div>
+
+          <div class="controls">
+            <button class="btn ghost" id="prevQ">◀ Prev</button>
+            <button class="btn ghost" id="nextQ">Next ▶</button>
+            <button class="btn primary" id="submitQ">Submit</button>
+            <button class="btn" id="finishLevel">Finish Level</button>
+          </div>
+        </div>
+
+        <div id="certBox" class="card cert">
+          <div>
+            <h3>🎉 Certificate unlocked!</h3>
+            <p class="muted">You scored ≥80%. Download your certificate.</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn primary" id="downloadCert">Download PNG</button>
+              <button class="btn ghost" onclick="go('levels')">Back to Levels</button>
+            </div>
+          </div>
+          <canvas id="certCanvas" width="1200" height="740"></canvas>
+        </div>
+      </section>
+
+      <!-- LEADERBOARD -->
+      <section id="leaderboard" class="screen">
+        <h2>Leaderboard</h2>
+        <div class="card">
+          <table>
+            <thead><tr><th>#</th><th>Name</th><th>Points</th><th>Best %</th><th>Cleared</th></tr></thead>
+            <tbody id="lbBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- MULTIPLAYER (mock) -->
+      <section id="multiplayer" class="screen grid cols-2">
+        <div class="card">
+          <h3>Create Room</h3>
+          <p class="muted">Share the code with a friend (hook to backend later).</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn primary" id="createRoom">Create</button>
+            <input id="roomCode" readonly placeholder="Room code appears here"/>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Join Room</h3>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <input id="joinCode" placeholder="Enter room code"/>
+            <button class="btn primary" id="joinRoom">Join</button>
+          </div>
+          <p id="mpStatus" class="muted" style="margin-top:10px"></p>
+        </div>
+      </section>
+
+      <footer style="opacity:.85;margin:16px 0">
+        <div class="hr"></div>
+        <small class="muted">© 2025 BackBenchers • Designed & Developed by <strong>Jivithesh</strong>, CEO</small>
+      </footer>
+
+    </div>
+  </main>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="modal" id="authModal" aria-modal="true" role="dialog">
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <h3 id="authTitle">Sign in</h3>
+      <button class="btn ghost" id="closeAuth">✖</button>
+    </div>
+
+    <div id="signinForm" class="grid" style="margin-top:10px">
+      <div class="field"><label>Email</label><input id="siEmail" type="email" placeholder="you@college.edu"/></div>
+      <div class="field"><label>Password</label><input id="siPass" type="password" placeholder="••••••••"/></div>
+      <button class="btn primary" id="doSignin">Sign in</button>
+      <p class="muted">No account? <a href="#" id="toSignup">Create one</a></p>
+    </div>
+
+    <div id="signupForm" class="grid" style="display:none;margin-top:10px">
+      <div class="field"><label>Display name</label><input id="suName" placeholder="Your name"/></div>
+      <div class="field"><label>Email</label><input id="suEmail" type="email" placeholder="you@college.edu"/></div>
+      <div class="field"><label>Password</label><input id="suPass" type="password" placeholder="Min 6 chars"/></div>
+      <div class="field"><label>Confirm Password</label><input id="suPass2" type="password" placeholder="Repeat"/></div>
+      <button class="btn primary" id="doSignup">Create account</button>
+      <p class="muted">Already have an account? <a href="#" id="toSignin">Sign in</a></p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Saved</div>
+
+<script>
+/* ========= Particle Background ========= */
+(function particles(){
+  const c=document.getElementById('bgParticles'); const ctx=c.getContext('2d');
+  function resize(){ c.width=innerWidth; c.height=innerHeight; }
+  addEventListener('resize',resize); resize();
+  const dots=[...Array(80)].map(()=>({x:Math.random()*c.width,y:Math.random()*c.height,vx:(Math.random()-.5)*0.6,vy:(Math.random()-.5)*0.6,r:1+Math.random()*1.8}));
+  function step(){
+    ctx.clearRect(0,0,c.width,c.height);
+    const a1=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#a855f7';
+    ctx.fillStyle=a1; ctx.globalAlpha=0.35;
+    dots.forEach(d=>{ d.x+=d.vx; d.y+=d.vy;
+      if(d.x<0||d.x>c.width) d.vx*=-1; if(d.y<0||d.y>c.height) d.vy*=-1;
+      ctx.beginPath(); ctx.arc(d.x,d.y,d.r,0,Math.PI*2); ctx.fill();
+    });
+    ctx.globalAlpha=0.07; ctx.strokeStyle=a1;
+    for(let i=0;i<dots.length;i++) for(let j=i+1;j<dots.length;j++){
+      const dx=dots[i].x-dots[j].x, dy=dots[i].y-dots[j].y, d=Math.hypot(dx,dy);
+      if(d<120){ ctx.lineWidth=1- d/120; ctx.beginPath(); ctx.moveTo(dots[i].x,dots[i].y); ctx.lineTo(dots[j].x,dots[j].y); ctx.stroke(); }
+    }
+    ctx.globalAlpha=1;
+    requestAnimationFrame(step);
+  }
+  step();
+})();
+
+/* ========= Helpers ========= */
+function ripple(e){
+  const b=e.currentTarget, s=document.createElement('span'); s.className='r';
+  const d=Math.max(b.clientWidth,b.clientHeight); s.style.width=s.style.height=d+'px';
+  const r=b.getBoundingClientRect(); s.style.left=(e.clientX-r.left-d/2)+'px'; s.style.top=(e.clientY-r.top-d/2)+'px';
+  b.appendChild(s); setTimeout(()=>s.remove(),600);
+}
+document.addEventListener('click',e=>{ const t=e.target.closest('.btn'); if(t) ripple(e); });
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1400); }
+function uid(){ return Math.random().toString(36).slice(2,8).toUpperCase(); }
+
+/* ========= Theme: mode & color ========= */
+(function initTheme(){
+  const root=document.documentElement;
+  const savedMode=localStorage.getItem('bb_mode')||'dark';
+  const savedTheme=localStorage.getItem('bb_theme')||'purple';
+  root.setAttribute('data-mode', savedMode);
+  root.classList.add('theme-'+savedTheme);
+  document.getElementById('modeToggle').textContent = savedMode==='dark' ? 'Dark' : 'Light';
+  document.querySelectorAll('.theme-dot').forEach(dot=>{
+    dot.addEventListener('click', ()=>{
+      const t = dot.getAttribute('data-theme');
+      root.classList.remove('theme-purple','theme-blue','theme-cyan','theme-green','theme-orange','theme-pink');
+      root.classList.add('theme-'+t);
+      localStorage.setItem('bb_theme', t);
+    });
+  });
+  document.getElementById('modeToggle').addEventListener('click', ()=>{
+    const cur = root.getAttribute('data-mode')==='dark' ? 'light' : 'dark';
+    root.setAttribute('data-mode', cur);
+    localStorage.setItem('bb_mode', cur);
+    document.getElementById('modeToggle').textContent = cur==='dark' ? 'Dark' : 'Light';
+  });
+})();
+
+/* ========= LocalStorage “backend” ========= */
+const DB = {
+  users: () => JSON.parse(localStorage.getItem('bb_users')||'[]'),
+  saveUsers: (arr)=> localStorage.setItem('bb_users', JSON.stringify(arr)),
+  session: () => JSON.parse(localStorage.getItem('bb_session')||'null'),
+  setSession: (u)=> localStorage.setItem('bb_session', JSON.stringify(u)),
+  leaderboard: () => JSON.parse(localStorage.getItem('bb_lb')||'[]'),
+  saveLeaderboard: (arr)=> localStorage.setItem('bb_lb', JSON.stringify(arr)),
+  setUser(email, patch){
+    const arr=DB.users(); const i=arr.findIndex(x=>x.email===email);
+    if(i>-1){ arr[i]={...arr[i],...patch}; DB.saveUsers(arr); }
+  }
+};
+
+/* ========= Auth ========= */
+const authModal = document.getElementById('authModal');
+const openAuth = document.getElementById('openAuth');
+const closeAuth = document.getElementById('closeAuth');
+const signinForm = document.getElementById('signinForm');
+const signupForm = document.getElementById('signupForm');
+document.getElementById('toSignup').onclick = (e)=>{ e.preventDefault(); signinForm.style.display='none'; signupForm.style.display='grid'; document.getElementById('authTitle').textContent='Sign up'; };
+document.getElementById('toSignin').onclick = (e)=>{ e.preventDefault(); signupForm.style.display='none'; signinForm.style.display='grid'; document.getElementById('authTitle').textContent='Sign in'; };
+openAuth.onclick = ()=> authModal.style.display='flex';
+closeAuth.onclick = ()=> authModal.style.display='none';
+
+document.getElementById('doSignup').onclick = ()=>{
+  const name = document.getElementById('suName').value.trim();
+  const email = document.getElementById('suEmail').value.trim().toLowerCase();
+  const pass = document.getElementById('suPass').value;
+  const pass2= document.getElementById('suPass2').value;
+  if(!name || !email || pass.length<6 || pass!==pass2){ toast('Check your details'); return; }
+  const users=DB.users();
+  if(users.some(u=>u.email===email)){ toast('Email already exists'); return; }
+  users.push({name,email,pass,points:0,best:0,cleared:0,certs:[],activity:[]});
+  DB.saveUsers(users);
+  DB.setSession({email});
+  authModal.style.display='none';
+  loadSessionUI();
+  toast('Account created');
+};
+
+document.getElementById('doSignin').onclick = ()=>{
+  const email = document.getElementById('siEmail').value.trim().toLowerCase();
+  const pass  = document.getElementById('siPass').value;
+  const u = DB.users().find(x=>x.email===email && x.pass===pass);
+  if(!u){ toast('Invalid credentials'); return; }
+  DB.setSession({email});
+  authModal.style.display='none';
+  loadSessionUI();
+  toast('Signed in');
+};
+
+document.getElementById('logoutBtn').onclick = ()=>{ localStorage.removeItem('bb_session'); loadSessionUI(); toast('Logged out'); };
+
+/* ========= Profile dropdown ========= */
+const profileBtn = document.getElementById('profileBtn');
+const profileDrop = document.getElementById('profileDrop');
+profileBtn.addEventListener('click', ()=>{ profileDrop.style.display = (profileDrop.style.display==='block'?'none':'block'); });
+document.addEventListener('click', (e)=>{ if(!e.target.closest('#profileMenu')) profileDrop.style.display='none'; });
+document.getElementById('ddSave').onclick=()=>{
+  const s=DB.session(); if(!s){ toast('Sign in first'); return; }
+  const name=document.getElementById('ddNameInput').value.trim();
+  if(!name){ toast('Enter a name'); return; }
+  DB.setUser(s.email,{name}); loadSessionUI(); toast('Name updated');
+};
+document.getElementById('ddLogout').onclick=()=>{
+  localStorage.removeItem('bb_session'); loadSessionUI(); profileDrop.style.display='none'; toast('Logged out');
+};
+
+/* ========= Router ========= */
+const screens=['home','levels','quiz','leaderboard','multiplayer'];
+function go(route){
+  screens.forEach(id=>{
+    document.getElementById(id).classList.toggle('active-screen', id===route);
+    document.querySelector(`[data-route="${id}"]`)?.classList.toggle('active', id===route);
+  });
+  if(route==='levels') renderLevels();
+  if(route==='leaderboard') renderLeaderboard();
+}
+document.getElementById('sideNav').addEventListener('click', e=>{
+  if(e.target.matches('[data-route]')){ e.preventDefault(); go(e.target.dataset.route); }
+});
+
+/* ========= Levels & Quiz Engine ========= */
+const TOTAL_LEVELS=15, QUESTIONS_PER_LEVEL=10;
+const levelCache={};
+const state={ currentLevel:1, idx:0, answers:[], results:[], score:0, start:0, timerId:null };
+
+function buildLevel(level){
+  const bank=[
+    {q:'Semantic main content:', a:'<main>', opts:['<header>','<section>','<article>','<main>'], meta:'HTML'},
+    {q:'Background color property:', a:'background-color', opts:['bg','fill','background-color','color'], meta:'CSS'},
+    {q:'Strict equality operator:', a:'===', opts:['=','==','===','!='], meta:'JS'},
+    {q:'HTTP 404 means:', a:'Not Found', opts:['OK','Redirect','Not Found','Server Error'], meta:'Web'},
+    {q:'Remove last array item:', a:'pop()', opts:['shift()','slice()','pop()','splice(0)'], meta:'JS'},
+    {q:'Enable CSS Grid:', a:'display: grid', opts:['grid:on','layout:grid','display: grid','grid:true'], meta:'CSS'},
+    {q:'Viewport meta goes in:', a:'<head>', opts:['<head>','<body>','<meta>','<footer>'], meta:'HTML'},
+    {q:'Promise success handler:', a:'.then()', opts:['.catch()','.then()','.finally()','.done()'], meta:'JS'},
+    {q:'Flex main-axis alignment:', a:'justify-content', opts:['align-items','justify-content','place-items','gap'], meta:'CSS'},
+    {q:'Persistent browser store:', a:'localStorage', opts:['sessionStorage','localStorage','cookies','cache'], meta:'Web'},
+  ];
+  const q=[]; const pool=bank.slice();
+  for(let i=0;i<QUESTIONS_PER_LEVEL;i++){
+    const idx=Math.floor(Math.random()*pool.length);
+    const base=pool.splice(idx,1)[0];
+    const opts=base.opts.slice().sort(()=>Math.random()-0.5);
+    q.push({q:base.q, options:opts, answer:opts.indexOf(base.a), meta:base.meta});
+    if(pool.length===0) pool.push(...bank);
+  }
+  return q;
+}
+
+function startLevel(level){
+  state.currentLevel=level;
+  state.idx=0; state.answers=Array(QUESTIONS_PER_LEVEL).fill(null);
+  state.results=Array(QUESTIONS_PER_LEVEL).fill(null);
+  state.score=0; state.start=Date.now();
+  if(!levelCache[level]) levelCache[level]=buildLevel(level);
+  document.getElementById('lvlNo').textContent=level;
+  document.getElementById('qTotal').textContent=QUESTIONS_PER_LEVEL;
+  document.getElementById('liveScore').textContent=0;
+  document.getElementById('certBox').style.display='none';
+  clearInterval(state.timerId);
+  state.timerId=setInterval(()=>{
+    const s=Math.floor((Date.now()-state.start)/1000);
+    const mm=String(Math.floor(s/60)).padStart(2,'0');
+    const ss=String(s%60).padStart(2,'0');
+    document.getElementById('timer').textContent=`${mm}:${ss}`;
+  },1000);
+  go('quiz'); renderQuestion(true);
+}
+
+/* Ensure OPTION TEXT shows literally (e.g., "<main>"), not as HTML */
+function setOptionContent(btn, label, text){
+  const lbl=document.createElement('span'); lbl.className='label'; lbl.textContent=label;
+  const txt=document.createElement('span'); txt.textContent=' ' + text; /* textContent escapes safely */
+  btn.replaceChildren(lbl, txt);
+}
+
+function renderQuestion(reset=false){
+  const set=levelCache[state.currentLevel]; const i=state.idx; const it=set[i];
+  const wrap=document.getElementById('qWrap');
+  if(reset){ wrap.classList.remove('slideQ'); void wrap.offsetWidth; wrap.classList.add('slideQ'); }
+  document.getElementById('qIndex').textContent=i+1;
+  document.getElementById('qText').textContent=it.q;
+  document.getElementById('qMeta').textContent=`Topic: ${it.meta}`;
+  const options=document.getElementById('options'); options.innerHTML='';
+  it.options.forEach((opt,j)=>{
+    const b=document.createElement('button'); b.className='opt'; b.type='button';
+    setOptionContent(b, String.fromCharCode(65+j)+'.', opt);
+    if(state.answers[i]===j) b.classList.add('selected');
+    b.onclick=()=>{
+      state.answers[i]=j;
+      [...options.children].forEach(x=>x.classList.remove('selected'));
+      b.classList.add('selected');
+      updateProgressBar();
+    };
+    options.appendChild(b);
+  });
+  const fb=document.getElementById('feedback'); fb.className='feedback'; fb.style.display='none';
+  updateProgressBar();
+}
+
+function updateProgressBar(){
+  const attempted = state.answers.filter(a=>a!=null).length;
+  const pct = (attempted/QUESTIONS_PER_LEVEL)*100;
+  document.getElementById('bar').style.width = pct+'%';
+}
+
+document.getElementById('prevQ').onclick=()=>{ if(state.idx>0){ state.idx--; renderQuestion(true); } };
+document.getElementById('nextQ').onclick=()=>{ if(state.idx<QUESTIONS_PER_LEVEL-1){ state.idx++; renderQuestion(true); } };
+
+document.getElementById('submitQ').onclick=()=>{
+  const set=levelCache[state.currentLevel]; const i=state.idx;
+  const sel=state.answers[i]; if(sel==null){ toast('Choose an option'); return; }
+  const correct = sel===set[i].answer; state.results[i]=correct; if(correct) state.score+=10;
+  document.getElementById('liveScore').textContent=state.score;
+  const ops=document.querySelectorAll('#options .opt');
+  ops.forEach((o,j)=>{
+    o.classList.remove('selected');
+    if(j===set[i].answer) o.classList.add('correct');
+    if(j===sel && j!==set[i].answer) o.classList.add('wrong');
+    o.disabled=true;
+  });
+  const fb=document.getElementById('feedback');
+  fb.textContent = correct ? '✅ Correct!' : '❌ Incorrect.';
+  fb.className='feedback '+(correct?'ok':'no');
+  fb.style.display='block';
+};
+
+document.getElementById('finishLevel').onclick=()=>{
+  clearInterval(state.timerId);
+  const correct = state.results.filter(r=>r===true).length;
+  const pct = Math.round((correct/QUESTIONS_PER_LEVEL)*100);
+  const pass = pct>=80;
+  const session=DB.session(); if(!session){ toast('Sign in to save progress'); return; }
+  const users=DB.users(); const idx=users.findIndex(u=>u.email===session.email);
+  if(idx>-1){
+    const u=users[idx];
+    u.points += state.score;
+    u.best   = Math.max(u.best||0, pct);
+    if(pass){
+      const before = u.cleared||0;
+      u.cleared = Math.max(before, state.currentLevel);
+      const certId=`L${state.currentLevel}-${Date.now()}`;
+      u.certs = (u.certs||[]).concat([{id:certId, level:state.currentLevel, pct, date:new Date().toISOString()}]);
+      u.activity = (u.activity||[]).concat([`Cleared Level ${state.currentLevel} • ${pct}%`]);
+      DB.saveUsers(users);
+      const lb=DB.leaderboard(); const li=lb.findIndex(x=>x.email===u.email);
+      const rec={email:u.email,name:u.name,points:u.points,best:u.best,cleared:u.cleared};
+      if(li>-1) lb[li]=rec; else lb.push(rec); DB.saveLeaderboard(lb);
+      showCertificate(u.name||u.email, state.currentLevel, pct);
+      toast('Level cleared! 🎉');
+    } else {
+      u.activity=(u.activity||[]).concat([`Attempted Level ${state.currentLevel} • ${pct}%`]);
+      DB.saveUsers(users); toast('Score < 80%. Try again!');
+    }
+    refreshHome(); renderLevels(); renderLeaderboard(); loadSessionUI();
+  }
+};
+
+/* ========= Certificate ========= */
+function showCertificate(name, level, pct){
+  const box=document.getElementById('certBox'); box.style.display='grid';
+  const c=document.getElementById('certCanvas'), ctx=c.getContext('2d');
+  const cs=getComputedStyle(document.documentElement);
+  const a1=cs.getPropertyValue('--accent').trim()||'#a855f7';
+  const a2=cs.getPropertyValue('--accent2').trim()||'#7c3aed';
+
+  // gradient bg
+  const g=ctx.createLinearGradient(0,0,c.width,0);
+  g.addColorStop(0,a1); g.addColorStop(1,a2);
+  ctx.fillStyle=g; ctx.fillRect(0,0,c.width,c.height);
+
+  // watermark
+  ctx.globalAlpha=0.08; ctx.fillStyle='#ffffff'; ctx.textAlign='center';
+  ctx.font='bold 220px Inter'; ctx.fillText('BB ⚡', c.width/2, c.height/2+40);
+  ctx.globalAlpha=1;
+
+  // glass panel
+  ctx.fillStyle='rgba(0,0,0,0.25)';
+  ctx.fillRect(80,110,c.width-160,c.height-220);
+  ctx.strokeStyle='#ffffff'; ctx.globalAlpha=0.25; ctx.lineWidth=14; ctx.strokeRect(80,110,c.width-160,c.height-220);
+  ctx.globalAlpha=1;
+
+  // headings
+  ctx.fillStyle='#ffffff'; ctx.textAlign='center';
+  ctx.font='bold 64px Inter'; ctx.fillText('Certificate of Achievement', c.width/2, 210);
+  ctx.font='24px Inter'; ctx.fillText('This certifies that', c.width/2, 280);
+  ctx.font='bold 52px Inter'; ctx.fillText(name, c.width/2, 340);
+  ctx.font='24px Inter'; ctx.fillText(`has successfully completed Level ${level} with a score of ${pct}%`, c.width/2, 395);
+  ctx.font='20px Inter'; ctx.fillText('BackBenchers — Neo Futuristic Edition', c.width/2, 450);
+
+  // authorized line (CEO)
+  ctx.font='20px Inter';
+  ctx.fillText('Authorized by: Jivithesh, CEO of BackBenchers', c.width/2, 620);
+
+  // date
+  ctx.font='18px Inter';
+  ctx.fillText(new Date().toDateString(), c.width/2, 660);
+
+  document.getElementById('downloadCert').onclick=()=>{
+    const a=document.createElement('a'); a.download=`Certificate_Level_${level}.png`; a.href=c.toDataURL('image/png'); a.click();
+  };
+}
+
+/* ========= Levels ========= */
+function renderLevels(){
+  const wrap=document.getElementById('levelsList'); wrap.innerHTML='';
+  const s=DB.session(); const u=s? DB.users().find(x=>x.email===s.email):null;
+  const cleared=u?.cleared||0;
+  for(let i=1;i<=TOTAL_LEVELS;i++){
+    const locked = i>1 && cleared < (i-1);
+    const div=document.createElement('div'); div.className='level card'; if(locked) div.classList.add('locked');
+    div.innerHTML=`
+      <div><strong>Level ${i}</strong> <span class="muted">• 10 questions • 80% to pass</span></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${i<=cleared ? '<span class="badge">Cleared</span>' : (locked?'<span class="badge">Locked</span>':'<span class="badge">Ready</span>')}
+        <button class="btn primary" ${locked?'disabled':''}>Start</button>
+      </div>`;
+    div.querySelector('button').onclick=()=> startLevel(i);
+    wrap.appendChild(div);
+  }
+}
+
+/* ========= Leaderboard ========= */
+function renderLeaderboard(){
+  const body=document.getElementById('lbBody'); body.innerHTML='';
+  const lb=DB.leaderboard().sort((a,b)=> b.points - a.points || b.cleared - a.cleared || b.best - a.best);
+  lb.slice(0,50).forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i+1}</td><td>${r.name||r.email}</td><td>${r.points}</td><td>${r.best}%</td><td>${r.cleared}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+/* ========= Multiplayer (mock) ========= */
+document.getElementById('createRoom').onclick=()=>{
+  const code=uid(); document.getElementById('roomCode').value=code;
+  document.getElementById('mpStatus').textContent=`Room ${code} created (demo). Add backend/WebSocket to play live.`;
+};
+document.getElementById('joinRoom').onclick=()=>{
+  const code=(document.getElementById('joinCode').value||'').trim().toUpperCase();
+  if(!code){ toast('Enter a code'); return; }
+  document.getElementById('mpStatus').textContent=`Joined room ${code} (demo).`;
+};
+
+/* ========= Session UI + Profile mini-stats ========= */
+function refreshHome(){
+  const s=DB.session(); const u=s? DB.users().find(x=>x.email===s.email):null;
+  document.getElementById('progCleared').textContent=u?.cleared||0;
+  document.getElementById('bestScore').textContent=u?.best||0;
+  document.getElementById('totalPoints').textContent=u?.points||0;
+  document.getElementById('certCount').textContent=u?.certs?.length||0;
+
+  // topbar mini profile
+  document.getElementById('miniName').textContent = u?.name || 'Guest';
+  document.getElementById('miniStats').textContent = `Points ${u?.points||0} • Certs ${u?.certs?.length||0}`;
+  document.getElementById('ddName').textContent = u?.name || 'Guest';
+  document.getElementById('ddEmail').textContent = u?.email || '';
+  document.getElementById('ddPoints').textContent = u?.points||0;
+  document.getElementById('ddBest').textContent = u?.best||0;
+  document.getElementById('ddCerts').textContent = u?.certs?.length||0;
+  document.getElementById('ddNameInput').value = u?.name||'';
+}
+function loadSessionUI(){
+  const s=DB.session(); const badge=document.getElementById('userBadge');
+  const inBtn=document.getElementById('openAuth'), outBtn=document.getElementById('logoutBtn');
+  if(s){
+    const u=DB.users().find(x=>x.email===s.email);
+    badge.textContent=u?.name || s.email;
+    inBtn.style.display='none'; outBtn.style.display='';
+  } else {
+    badge.textContent='Guest';
+    inBtn.style.display=''; outBtn.style.display='none';
+  }
+  refreshHome(); renderLevels(); renderLeaderboard();
+}
+loadSessionUI(); renderLevels(); renderLeaderboard();
+
+</script>
+</body>
+</html>
