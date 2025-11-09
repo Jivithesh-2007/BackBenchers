@@ -1,4 +1,4 @@
-# ⚡ BackBenchers — Neo Futuristic EdTech Quiz Platform
+# ⚡ BackBenchers — Futuristic EdTech Quiz Platform
 
 **Developed & Designed by [Jivithesh](#)**  
 > *CEO & Founder — BackBenchers*  
